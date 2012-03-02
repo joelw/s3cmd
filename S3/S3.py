@@ -664,7 +664,8 @@ class S3(object):
                 time_before = datetime.datetime.now()
                 conn.send(data)
                 time_after = datetime.datetime.now()
-                elapsed_time = (time_after - time_before).total_seconds()
+                elapsed_time = (time_after - time_before)
+                elapsed_time = elapsed_time.days * 86400 + elapsed_time.seconds + float(elapsed_time.microseconds)/1000000.0
                 if self.config.progress_meter:
                     progress.update(delta_position = len(data))
                 size_left -= len(data)
@@ -678,7 +679,9 @@ class S3(object):
                         time_before = datetime.datetime.now()
                         time.sleep(expected_time - elapsed_time + self.sleep_adjust)
                         time_after = datetime.datetime.now()
-                        self.sleep_adjust = (expected_time - elapsed_time) - (time_after - time_before).total_seconds()
+                        sleep_elapsed_time = time_after - time_before
+                        sleep_elapsed_time = sleep_elapsed_time.days * 86400 + sleep_elapsed_time.seconds + float(sleep_elapsed_time.microseconds)/1000000.0
+                        self.sleep_adjust = expected_time - elapsed_time - sleep_elapsed_time
                         debug("Sleep adjust %s", self.sleep_adjust)
                         if self.sleep_adjust > 0.5:
                             self.sleep_adjust = 0.5
