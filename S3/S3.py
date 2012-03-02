@@ -10,6 +10,7 @@ import httplib
 import logging
 import mimetypes
 import re
+import datetime
 from logging import debug, info, warning, error
 from stat import ST_SIZE
 
@@ -654,16 +655,35 @@ class S3(object):
         file.seek(offset)
         md5_hash = md5()
         try:
+            self.sleep_adjust = 0.0
             while (size_left > 0):
                 #debug("SendFile: Reading up to %d bytes from '%s'" % (self.config.send_chunk, file.name))
-                data = file.read(min(self.config.send_chunk, size_left))
+                sendsize = min(self.config.send_chunk, size_left)
+                data = file.read(sendsize)
                 md5_hash.update(data)
+                time_before = datetime.datetime.now()
                 conn.send(data)
+                time_after = datetime.datetime.now()
+                elapsed_time = (time_after - time_before).total_seconds()
                 if self.config.progress_meter:
                     progress.update(delta_position = len(data))
                 size_left -= len(data)
                 if throttle:
                     time.sleep(throttle)
+                # Speed limit
+                if self.config.speed_limit > 0:
+                    expected_time = float(sendsize) / (self.config.speed_limit*1024)
+                    debug("sendsize %s, Expected %s, Actual %s", sendsize, expected_time, elapsed_time)
+                    if expected_time > elapsed_time:
+                        time_before = datetime.datetime.now()
+                        time.sleep(expected_time - elapsed_time + self.sleep_adjust)
+                        time_after = datetime.datetime.now()
+                        self.sleep_adjust = (expected_time - elapsed_time) - (time_after - time_before).total_seconds()
+                        debug("Sleep adjust %s", self.sleep_adjust)
+                        if self.sleep_adjust > 0.5:
+                            self.sleep_adjust = 0.5
+                        if self.sleep_adjust < -0.5:
+                            self.sleep_adjust = -0.5
             md5_computed = md5_hash.hexdigest()
             response = {}
             http_response = conn.getresponse()

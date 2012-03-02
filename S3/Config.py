@@ -83,6 +83,7 @@ class Config(object):
     website_index = "index.html"
     website_error = ""
     website_endpoint = "http://%(bucket)s.s3-website-%(location)s.amazonaws.com/"
+    speed_limit = 0
 
     ## Creating a singleton
     def __new__(self, configfile = None):
