@@ -701,10 +701,10 @@ class S3(object):
             if self.config.progress_meter:
                 progress.done("failed")
             if retries:
-                if retries < self._max_retries:
-                    throttle = throttle and throttle * 5 or 0.01
                 warning("Upload failed: %s (%s)" % (resource['uri'], e))
-                warning("Retrying on lower speed (throttle=%0.2f)" % throttle)
+                if self.config.speed_limit == 0 and retries < self._max_retries:
+                    throttle = throttle and throttle * 5 or 0.01
+                    warning("Retrying on lower speed (throttle=%0.2f)" % throttle)
                 warning("Waiting %d sec..." % self._fail_wait(retries))
                 time.sleep(self._fail_wait(retries))
                 # Connection error -> same throttle value
